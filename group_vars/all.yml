@@ -1,0 +1,14 @@
+install_dir: "/home/{{ ansible_user }}/ADLAH"
+
+user: "johannes_moeller"
+cluster_ip: "10.1.0.15"
+sensor_ip: "10.1.0.5"
+hive_ip: "10.1.0.10"
+
+
+
+
+
+
+
+

@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+WORKDIR /app
+
+# Dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Refactored code
+COPY rl_agent ./rl_agent
+ENV PYTHONUNBUFFERED=1
+
+# No need for kubectl in the simulation container
+# RUN apt-get update && \
+#     apt-get install -y curl && \
+#     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+#     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+#     rm -f kubectl && \
+#     apt-get purge -y curl && \
+#     apt-get autoremove -y && \
+#     apt-get clean
+
+# Create non-root user
+RUN useradd -m -s /bin/bash appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Start with the simulation runner
+CMD ["python", "-m", "rl_agent.simulation_runner"] 

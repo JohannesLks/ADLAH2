@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  rl-agent-sim:
+    build:
+      context: .
+      dockerfile: Dockerfile.sim
+    container_name: rl-agent-sim
+    image: adlah/rl-agent-sim
+    volumes:
+      - ./rl_agent/models:/app/rl_agent/models
+      - ./cluster_kubeconfig/config_host:/app/kubeconfig_host:ro
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - ES_HOST=http://elasticsearch:9200
+   networks:
+     - hive_default
+
+networks:
+ hive_default:
+   external: true

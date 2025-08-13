@@ -1,0 +1,20 @@
+filebeat.config.modules:
+  enabled: false                # ← Module ganz aus
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /data/madcat.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    encoding: utf-8
+
+output.logstash:
+  hosts: ["${HIVE_IP}:15044"]
+  ssl.enabled: false
+
+logging.level: info
+logging.selectors: ["input"]

@@ -1,0 +1,65 @@
+- hosts: hive
+  become: false
+  vars:
+    repo_dir: "/home/{{ ansible_user }}/ADLAH"
+    install_dir: "/home/{{ ansible_user }}/hive"
+
+  tasks:
+    - name: Ensure target directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ repo_dir }}"
+        - "{{ install_dir }}"
+
+    - name: Stop and remove existing services from previous deployments
+      community.docker.docker_compose_v2:
+        project_src: "{{ install_dir }}"
+        state: absent
+        remove_orphans: yes
+      ignore_errors: yes
+
+    - name: Pull latest code into the repository directory
+      ansible.builtin.git:
+        repo: 'https://github.com/JohannesLks/adlah.git'
+        dest: "{{ repo_dir }}"
+        version: "{{ git_branch | default('dev') }}"
+        accept_hostkey: yes
+
+    - name: Create .adlah_env file for install.sh
+      ansible.builtin.copy:
+        content: |
+          ADLAH_TYPE=HIVE
+        dest: "/home/{{ ansible_user }}/.adlah_env"
+        mode: '0644'
+
+    - name: Run install.sh to set up Hive
+      ansible.builtin.command:
+        cmd: >
+          ./install.sh 
+          --type hive 
+          --user admin 
+          --password '{{ kibana_admin_pass }}' 
+          --yes
+        chdir: "{{ repo_dir }}"
+      environment:
+        PASS: "{{ kibana_admin_pass }}"
+
+    - name: Run deploy.sh to onboard cluster
+      ansible.builtin.command:
+        cmd: "bash -l -c \"./deploy.sh --cluster --ip '{{ cluster_ip }}' --user '{{ cluster_user }}' {% if grafana_pass is defined %}--grafana-pass '{{ grafana_pass }}'{% endif %}\""
+      args:
+        chdir: "{{ repo_dir }}"
+      when: cluster_ip is defined and cluster_user is defined
+
+    - name: Show container logs
+      ansible.builtin.command:
+        cmd: docker compose logs
+        chdir: "{{ install_dir }}"
+      register: container_logs
+
+    - name: Print container logs
+      ansible.builtin.debug:
+        var: container_logs.stdout_lines

@@ -1,0 +1,10 @@
+apiVersion: crd.projectcalico.org/v1
+kind: IPPool
+metadata:
+  name: honeypod-pool
+spec:
+  cidr: 10.2.0.0/16  # Neue IP-Range für Honeypods
+  ipipMode: Never
+  vxlanMode: Never
+  natOutgoing: true
+  nodeSelector: all() 

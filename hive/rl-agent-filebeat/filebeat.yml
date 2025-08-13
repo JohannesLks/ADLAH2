@@ -1,0 +1,16 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/rl-agent/rl-agent.log
+  json.keys_under_root: true
+  json.add_error_key: true
+
+processors:
+- add_fields:
+    target: ''
+    fields:
+      log.source: rl-agent
+
+output.logstash:
+  hosts: ["logstash:5044"]

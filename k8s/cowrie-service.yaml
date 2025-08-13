@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cowrie-ssh
+spec:
+  type: LoadBalancer
+  selector:
+    app: cowrie
+  ports:
+    - protocol: TCP
+      port: 22
+      targetPort: 2222 

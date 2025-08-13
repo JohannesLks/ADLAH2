@@ -1,0 +1,9 @@
+[submodule "The-Paper"]
+	path = The-Paper
+	url = git@github.com:JohannesLks/The-Paper.git
+[submodule "madcat-data-analysis"]
+	path = madcat-data-analysis
+	url = git@github.com:JohannesLks/madcat-data-analysis.git
+[submodule "Thesis"]
+	path = Thesis
+	url = https://github.com/JohannesLks/Thesis.git

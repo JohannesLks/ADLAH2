@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  madcat:
+    build: ./madcat
+    container_name: madcat
+    restart: always
+    network_mode: host         # Host-Netz für RAW-Sockets
+    privileged: true           # nötig für iptables
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+    environment:
+      HIVE_IP:           ${HIVE_IP}
+      MADCAT_INTERFACE:  ${MADCAT_INTERFACE}
+      MADCAT_IP:         ${MADCAT_IP}
+      MGMT_INTERFACE:    ${MGMT_INTERFACE:-}   # optional
+
+    volumes:
+      - madcat-data:/data
+      - "/var/log/madcat:/var/log/madcat"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f tcp_ip_port_mon || exit 1"]
+      interval: "30s"
+      timeout: "5s"
+      retries: 3
+
+  filebeat:
+    build: ./filebeat
+    container_name: madcat-filebeat
+    restart: always
+    network_mode: host
+    user: root
+
+    environment:
+      HIVE_IP: "${HIVE_IP}"
+
+    volumes:
+      - madcat-data:/data:ro
+      - filebeat-data:/usr/share/filebeat/data
+      - "${HOME}/adlah_certs:/usr/share/filebeat/certs:ro"
+
+    depends_on:
+      - madcat
+
+    ports:
+      - "15044:15044"
+
+volumes:
+  madcat-data:
+  filebeat-data:

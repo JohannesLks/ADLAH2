@@ -1,0 +1,154 @@
+name: Deploy to Hive via Bastion
+
+on:
+  pull_request:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Validate SSH Secrets
+        run: |
+          if [ -z "${{ secrets.VM_HOST }}" ]; then
+            echo " Error: VM_HOST secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.VM_USER }}" ]; then
+            echo " Error: VM_USER secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.BASTION_HOST }}" ]; then
+            echo " Error: BASTION_HOST secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.BASTION_USER }}" ]; then
+            echo " Error: BASTION_USER secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.BASTION_SSH_PRIVATE_KEY }}" ]; then
+            echo " Error: BASTION_SSH_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.VM_SSH_PRIVATE_KEY }}" ]; then
+            echo " Error: VM_SSH_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          echo " All SSH secrets are configured"
+
+      - name: Setup SSH Keys and Configuration
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Create bastion private key file
+          echo "${{ secrets.BASTION_SSH_PRIVATE_KEY }}" > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
+          
+          # Create VM private key file
+          echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/vm_key
+          chmod 600 ~/.ssh/vm_key
+          
+          # Debug: Show key fingerprints
+          echo "=== SSH Key Debug Info ==="
+          echo "Bastion key fingerprint:"
+          ssh-keygen -lf ~/.ssh/bastion_key
+          echo "VM key fingerprint:"
+          ssh-keygen -lf ~/.ssh/vm_key
+          echo "Bastion public key:"
+          ssh-keygen -yf ~/.ssh/bastion_key
+          echo "VM public key:"
+          ssh-keygen -yf ~/.ssh/vm_key
+          echo "=== End SSH Key Debug ==="
+          
+          # Extract and display public keys for manual setup
+          echo "=== PUBLIC KEYS FOR MANUAL SETUP ==="
+          echo "Add this to ~/.ssh/authorized_keys on BASTION server:"
+          ssh-keygen -yf ~/.ssh/bastion_key
+          echo ""
+          echo "Add this to ~/.ssh/authorized_keys on TARGET VM:"
+          ssh-keygen -yf ~/.ssh/vm_key
+          echo "=== END PUBLIC KEYS ==="
+          
+          # Create SSH config for direct key usage
+          cat > ~/.ssh/config <<EOF
+          Host bastion
+            HostName ${{ secrets.BASTION_HOST }}
+            User ${{ secrets.BASTION_USER }}
+            IdentityFile ~/.ssh/bastion_key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            PasswordAuthentication no
+            PubkeyAuthentication yes
+            IdentitiesOnly yes
+            ConnectTimeout 30
+            ServerAliveInterval 60
+            ServerAliveCountMax 3
+          
+          Host hive
+            HostName ${{ secrets.VM_HOST }}
+            User ${{ secrets.VM_USER }}
+            IdentityFile ~/.ssh/vm_key
+            ProxyJump bastion
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            PasswordAuthentication no
+            PubkeyAuthentication yes
+            IdentitiesOnly yes
+            ConnectTimeout 60
+            ServerAliveInterval 60
+            ServerAliveCountMax 3
+          EOF
+          chmod 600 ~/.ssh/config
+          
+          # Test bastion connection
+          echo "Testing bastion connection..."
+          ssh bastion "echo 'Bastion connection successful'"
+          
+          # Test hive connection via bastion
+          echo "Testing hive connection via bastion..."
+          ssh hive "echo 'hive connection successful'"
+
+      - name: Create dynamic inventory
+        run: |
+          echo "[hive]" > inventory.ini
+          echo "hive ansible_host=hive ansible_user=${{ secrets.VM_USER }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes'" >> inventory.ini
+          echo "Inventory created:"
+          cat inventory.ini
+
+      - name: Run Ansible Playbook
+        env:
+          KIBANA_ADMIN_PASS: ${{ secrets.KIBANA_ADMIN_PASS }}
+          GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
+          GIT_BRANCH: ${{ github.event.pull_request.head.ref }}
+          CLUSTER_IP: ${{ secrets.VM_HOST }}
+          CLUSTER_USER: ${{ secrets.VM_USER }}
+        run: |
+          # Debug SSH configuration
+          echo "SSH config:"
+          cat ~/.ssh/config
+          echo ""
+          echo "SSH keys:"
+          ls -la ~/.ssh/
+          
+          # Test direct SSH to hive via bastion
+          echo "Testing SSH connection to hive via bastion..."
+          ssh hive "echo 'hive connection successful'"
+          
+          # Run Ansible without verbose output
+          ansible-playbook -i inventory.ini deploy/deploy_hive.yml \
+            --extra-vars "kibana_admin_pass=$KIBANA_ADMIN_PASS grafana_pass=$GRAFANA_PASS git_branch=$GIT_BRANCH cluster_ip=$CLUSTER_IP cluster_user=$CLUSTER_USER"

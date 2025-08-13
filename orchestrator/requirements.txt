@@ -1,0 +1,3 @@
+redis
+kubernetes
+os-client-config

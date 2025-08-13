@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-honeypod
+  namespace: honeypod
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /cowrie/var/log/cowrie.json
+        - /cowrie/var/log/cowrie.log
+      json.keys_under_root: true
+      json.add_error_key: true
+      json.message_key: message
+      fields:
+        honeypod_type: cowrie
+        source_ip: ${SRC_IP}
+        hive_ip: ${HIVE_IP}
+      fields_under_root: true
+
+    processors:
+    - add_host_metadata:
+        when.not.contains.tags: forwarded
+    - add_cloud_metadata: ~
+    - add_fields:
+        target:
+          dataset: cowrie.honeypod
+          namespace: honeypod
+          type: log
+
+    output.logstash:
+      hosts: ["logstash:5044"]
+      ssl.enabled: false
+      timeout: 30s
+      max_retries: 3
+
+    logging.level: info
+    logging.to_files: true
+    logging.files:
+      path: /var/log/filebeat
+      name: filebeat
+      keepfiles: 7
+      permissions: 0644 

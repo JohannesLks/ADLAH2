@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: honeypot-orchestrator
+  namespace: default
+  labels:
+    app: honeypot-orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: honeypot-orchestrator
+  template:
+    metadata:
+      labels:
+        app: honeypot-orchestrator
+    spec:
+      serviceAccountName: honeypot-orchestrator-sa
+      containers:
+      - name: orchestrator
+        image: honeypot-orchestrator:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: REDIS_HOST
+          value: "redis.honeypod.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: LOG_LEVEL
+          value: "INFO"
