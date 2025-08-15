@@ -1,2 +1,12 @@
----
-# Handler für die Rolle hive
+# Handlers for hive role
+
+- name: Restart hive stack
+	community.docker.docker_compose_v2:
+		project_src: "{{ ansible_env.HOME }}/hive"
+		state: restarted
+
+- name: Show hive services
+	command: docker ps --format 'table {{.Names}}\t{{.Status}}'
+	register: hive_ps
+	changed_when: false
+	listen: Show hive services

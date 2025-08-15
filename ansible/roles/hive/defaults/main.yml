@@ -1,2 +1,19 @@
----
-# Default-Variablen für die Rolle hive
+# Default variables for hive role
+kibana_user: admin
+ssh_port: 22
+redis_port: 6379
+rl_agent_env:
+	LOGLEVEL: INFO
+	WINDOW_SEC: 300
+	TRANSFORM_DEST: features_madcat
+	HONEYPOD_NS: default
+	HONEYPOD_TTL_SEC: 1800
+	REDIS_HOST: redis
+	REDIS_PORT: 6379
+	REDIS_CHANNEL: honeypod-map
+	REWARD_ALPHA: 1.0
+	REWARD_BETA: 0.05
+	CPU_WEIGHT: 0.7
+	MEM_WEIGHT: 0.3
+	ES_STARTUP_DELAY: 20
+	ES_HOST: http://elasticsearch:9200

@@ -1,6 +1,23 @@
 ---
-- hosts: all
+# Central playbook: runs roles per host group
+
+- name: Prepare hive nodes
+  hosts: hive
   become: true
-  vars_files:
-    - group_vars/all.yml
-  roles: []
+  roles:
+    - hive
+  tags: [hive]
+
+- name: Prepare sensor nodes
+  hosts: sensor
+  become: true
+  roles:
+    - sensor
+  tags: [sensor]
+
+- name: Prepare cluster node
+  hosts: cluster
+  become: true
+  roles:
+    - cluster
+  tags: [cluster]

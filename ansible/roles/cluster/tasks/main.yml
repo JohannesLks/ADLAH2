@@ -1,2 +1,5 @@
----
-# Tasks für die Rolle cluster
+# Tasks for cluster role
+
+- name: Placeholder - cluster setup upcoming
+	debug:
+		msg: "Cluster role still to implement (k8s, metallb, redis, etc.)"

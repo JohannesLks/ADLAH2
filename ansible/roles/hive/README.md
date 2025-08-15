@@ -1,3 +1,3 @@
-# Rolle: hive
+# Role: hive
 
-Hier werden alle Aufgaben zur Installation und Konfiguration des Hive-Clusters definiert.
+Contains tasks to install and configure the ADLAH hive stack (ELK + RL agent + supporting services).

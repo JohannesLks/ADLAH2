@@ -1,2 +1,112 @@
----
-# Tasks für die Rolle hive
+# Tasks for hive role (Debian family)
+
+- name: Ensure supported OS family (Debian)
+	assert:
+		that:
+			- ansible_os_family == 'Debian'
+		fail_msg: "This hive role supports only Debian family (Ubuntu, Debian)."
+		success_msg: "Debian family detected."
+
+- name: Update apt cache
+	apt:
+		update_cache: yes
+	when: ansible_os_family == 'Debian'
+
+- name: Install required packages
+	package:
+		name: ["curl", "python3-pip", "apache2-utils", "openssl"]
+		state: present
+
+- name: Install Docker (get.docker.com fallback)
+	shell: curl -fsSL https://get.docker.com | sh
+	args:
+		creates: /usr/bin/docker
+	when: ansible_os_family == 'Debian'
+
+- name: Ensure docker group exists
+	group:
+		name: docker
+		state: present
+
+- name: Add user to docker group
+	user:
+		name: "{{ ansible_user | default(ansible_user_id) }}"
+		groups: docker
+		append: yes
+
+- name: Install docker compose plugin
+	apt:
+		name: docker-compose-plugin
+		state: present
+	when: ansible_os_family == 'Debian'
+
+- name: Create RL agent env directory
+	file:
+		path: "{{ ansible_env.HOME }}/hive/env"
+		state: directory
+		owner: "{{ ansible_user | default(ansible_user_id) }}"
+		mode: '0755'
+
+- name: Write RL agent .env file
+	copy:
+		dest: "{{ ansible_env.HOME }}/hive/env/rl-agent.env"
+		owner: "{{ ansible_user | default(ansible_user_id) }}"
+		mode: '0644'
+		content: |
+			{% for k,v in rl_agent_env.items() %}{{ k }}={{ v }}
+			{% endfor %}
+
+- name: Write ADLAH .env file
+	copy:
+		dest: "{{ ansible_env.HOME }}/hive/.env"
+		owner: "{{ ansible_user | default(ansible_user_id) }}"
+		mode: '0600'
+		content: |
+			ADLAH_TYPE=HIVE
+			ADLAH_USER={{ kibana_user }}
+			KIBANA_ENCRYPTION_KEY={{ lookup('password', 'credential_store/kibana_key chars=ascii_letters,digits length=32') }}
+
+- name: Copy hive base directory (remote targets)
+	synchronize:
+		src: hive/
+		dest: "{{ ansible_env.HOME }}/hive/"
+		delete: no
+	delegate_to: localhost
+	when: inventory_hostname != 'localhost'
+
+- name: Copy hive files locally (localhost only)
+	copy:
+		src: "{{ item.src }}"
+		dest: "{{ ansible_env.HOME }}/hive/{{ item.dest }}"
+		mode: '0644'
+	loop: []
+	when: inventory_hostname == 'localhost'
+
+- name: Create htpasswd file
+	community.general.htpasswd:
+		path: "{{ ansible_env.HOME }}/hive/nginx/htpasswd"
+		name: "{{ kibana_user }}"
+		password: "{{ kibana_password }}"
+		crypt_scheme: md5
+	notify: Restart hive stack
+
+- name: Create self-signed certificate
+	openssl_certificate:
+		path: "{{ ansible_env.HOME }}/hive/nginx/certs/selfsigned.crt"
+		privatekey_path: "{{ ansible_env.HOME }}/hive/nginx/certs/selfsigned.key"
+		common_name: localhost
+		provider: selfsigned
+
+- name: Enable & start docker service
+	service:
+		name: docker
+		state: started
+		enabled: yes
+
+- name: Bring up docker compose stack
+	community.docker.docker_compose_v2:
+		project_src: "{{ ansible_env.HOME }}/hive"
+		state: present
+	register: compose_result
+	failed_when: compose_result is failed
+	notify: Show hive services

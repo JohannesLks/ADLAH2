@@ -1,2 +1,13 @@
 ---
-# Globale Variablen für alle Hosts
+# Global variables for all hosts
+
+# Bastion / jump host configuration (for dynamic use inside tasks)
+bastion_host: bastion1
+bastion_user: "{{ hostvars[bastion_host].ansible_user | default('ubuntu') }}"
+bastion_jump_arg: "-o ProxyJump={{ bastion_user }}@{{ hostvars[bastion_host].ansible_host }}"
+
+# Alternative using classic ProxyCommand:
+# bastion_jump_arg: "-o ProxyCommand='ssh -W %h:%p {{ bastion_user }}@{{ hostvars[bastion_host].ansible_host }}'"
+
+# Example ad‑hoc usage:
+# ansible -i ansible/hosts.ini hive -m ping -e "ansible_ssh_common_args='{{ bastion_jump_arg }}'"

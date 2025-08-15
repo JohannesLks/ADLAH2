@@ -1,20 +1,20 @@
-# Rollen-Verzeichnis
+# Roles Directory
 
-Hier kommen die einzelnen Rollen für dein Ansible-Projekt hinein. Jede Rolle erhält einen eigenen Unterordner.
+Each role in the Ansible project lives in its own subdirectory.
 
-Beispielstruktur für eine Rolle:
+Example structure:
 
 roles/
-  beispielrolle/
-    tasks/
-      main.yml
-    handlers/
-      main.yml
+  example_role/
+    tasks/main.yml
+    handlers/main.yml
     files/
     templates/
-    vars/
-      main.yml
-    defaults/
-      main.yml
-    meta/
-      main.yml
+    vars/main.yml
+    defaults/main.yml
+    meta/main.yml
+
+Guidelines:
+* Put only portable, reproducible artifacts here (no secrets, no generated certs).
+* Use `defaults/` for overridable values, `vars/` for rarely overridden constants.
+* Prefer templates over static files when they contain variable content.

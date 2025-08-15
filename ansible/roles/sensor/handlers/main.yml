@@ -1,2 +1,12 @@
----
-# Handler für die Rolle sensor
+# Handlers for sensor role
+
+- name: Restart sensor stack
+	community.docker.docker_compose_v2:
+		project_src: "{{ ansible_env.HOME }}/sensor"
+		state: restarted
+
+- name: Show sensor services
+	command: docker ps --format 'table {{.Names}}\t{{.Status}}'
+	register: sensor_ps
+	changed_when: false
+	listen: Show sensor services

@@ -1,3 +1,3 @@
-# Rolle: sensor
+# Role: sensor
 
-Hier werden alle Aufgaben zur Installation und Konfiguration des Sensors definiert.
+Contains tasks to install and configure the sensor node (MADCAT + log forwarding).

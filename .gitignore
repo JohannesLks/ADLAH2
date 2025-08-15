@@ -10,3 +10,13 @@
 *.pyc
 config
 tmp*
+ansible/hosts.ini
+ansible/**/vault.yml
+ansible/**/vault_*.yml
+ansible/**/.env
+ansible/**/htpasswd
+ansible/**/certs/
+ansible/**/nginx/certs/
+ansible/**/env/rl-agent.env
+ansible/**/redis/data/
+ansible/**/kibana/dist/
