@@ -66,7 +66,7 @@ setup_sensor() {
         cd ~ && rm -rf ~/sensor && 
         cd ~/ADLAH && 
         git fetch --all && 
-        git checkout just-ssh-forward && 
+        git checkout dev && 
         git pull && 
         ./install.sh --type sensor --user lukas \
             --hive-ip $HIVE_IP --madcat-if ens5 --mgmt-if ens4 \
