@@ -11,6 +11,8 @@ SENSOR_IP=10.1.0.5
 SENSOR_USER=lukas
 HIVE_IP=10.1.0.10
 CLUSTER_IP=10.1.0.15
+# Username used for Kibana / nginx basic auth (htpasswd). System user stays 'lukas'.
+KIBANA_AUTH_USER=adlah
 
 # =====================================
 # Helper Functions
@@ -43,7 +45,8 @@ install_hive() {
     export SENSOR_USER=$SENSOR_USER
     export HIVE_IP=$HIVE_IP
     rm -rf ~/hive
-    ~/ADLAH/install.sh --type hive --user lukas \
+    # Use dedicated Kibana/nginx basic auth user (not the system user)
+    ~/ADLAH/install.sh --type hive --user "$KIBANA_AUTH_USER" \
         --yes --password "$PASS"
     
     log "Running Certbot setup..."
@@ -56,7 +59,7 @@ deploy_cluster() {
     # The directory is created by deploy.sh, no need to create it here.
     sudo rm -rf $HOME/hive/cluster_kubeconfig/config_host
     ~/ADLAH/deploy.sh --cluster --ip $CLUSTER_IP \
-        --user lukas --grafana-pass "$PASS"
+    --user "$KIBANA_AUTH_USER" --grafana-pass "$PASS"
 }
 
 # Step 3: Setup Sensor
@@ -68,7 +71,7 @@ setup_sensor() {
         git fetch --all && 
         git checkout dev && 
         git pull && 
-        chmod +x ./install.sh && ./install.sh --type sensor --user lukas \
+    chmod +x ./install.sh && ./install.sh --type sensor --user lukas \
             --hive-ip $HIVE_IP --madcat-if ens5 --mgmt-if ens4 \
             --yes --password \"$PASS\"
     "
@@ -78,7 +81,7 @@ setup_sensor() {
 deploy_sensor() {
     log "Step 4: Deploying Sensor..."
     ~/ADLAH/deploy.sh --sensor --ip $SENSOR_IP \
-        --user lukas
+    --user lukas  # Sensor deploy still uses system user for SSH
 }
 # Step 4: Start Sensor Containers
 start_sensor_containers() {
