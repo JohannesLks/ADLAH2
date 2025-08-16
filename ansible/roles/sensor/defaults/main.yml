@@ -1,0 +1,5 @@
+# Default variables for sensor role
+hive_ip: ""
+madcat_interface: ens4
+mgmt_interface: ""
+ssh_port: 22

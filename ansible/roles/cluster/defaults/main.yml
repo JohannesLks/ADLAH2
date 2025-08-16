@@ -1,0 +1,3 @@
+# Default variables for cluster role
+k8s_version: "1.30"
+metallb_version: latest

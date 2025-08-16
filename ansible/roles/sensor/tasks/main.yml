@@ -1,0 +1,102 @@
+# Tasks for sensor role (Debian family)
+
+- name: Ensure supported OS family (Debian)
+	assert:
+		that:
+			- ansible_os_family == 'Debian'
+		fail_msg: "This sensor role supports only Debian family (Ubuntu, Debian)."
+		success_msg: "Debian family detected."
+
+- name: Update apt cache
+	apt:
+		update_cache: yes
+	when: ansible_os_family == 'Debian'
+
+- name: Install required packages
+	package:
+		name: ["curl", "python3-pip", "openssh-server", "openssl"]
+		state: present
+
+- name: Install Docker (get.docker.com fallback)
+	shell: curl -fsSL https://get.docker.com | sh
+	args:
+		creates: /usr/bin/docker
+	when: ansible_os_family == 'Debian'
+
+- name: Ensure docker group exists
+	group:
+		name: docker
+		state: present
+
+- name: Add user to docker group
+	user:
+		name: "{{ ansible_user | default(ansible_user_id) }}"
+		groups: docker
+		append: yes
+
+- name: Install docker compose plugin
+	apt:
+		name: docker-compose-plugin
+		state: present
+	when: ansible_os_family == 'Debian'
+
+- name: Create sensor base directory
+	file:
+		path: "{{ ansible_env.HOME }}/sensor"
+		state: directory
+		owner: "{{ ansible_user | default(ansible_user_id) }}"
+		mode: '0755'
+
+- name: Gather facts for interface IP
+	setup:
+		gather_subset: network
+
+- name: Determine MADCAT interface IP
+	set_fact:
+		madcat_ip: "{{ hostvars[inventory_hostname]['ansible_' + madcat_interface]['ipv4']['address'] | default('') }}"
+
+- name: Derive hive IP from first hive group host (if hive_ip unset)
+	set_fact:
+		hive_ip: "{{ (groups['hive'] | map('extract', hostvars, 'ansible_host') | list | first) | default(hive_ip, true) }}"
+	when: (hive_ip is not defined) or (hive_ip | length == 0)
+
+- name: Write sensor .env file
+	copy:
+		dest: "{{ ansible_env.HOME }}/sensor/.env"
+		owner: "{{ ansible_user | default(ansible_user_id) }}"
+		mode: '0600'
+		content: |
+			ADLAH_TYPE=SENSOR
+			HIVE_IP={{ hive_ip }}
+			MADCAT_INTERFACE={{ madcat_interface }}
+			MADCAT_IP={{ madcat_ip }}
+			MGMT_INTERFACE={{ mgmt_interface }}
+
+- name: Copy sensor files from control machine (remote targets)
+	synchronize:
+		src: sensor/
+		dest: "{{ ansible_env.HOME }}/sensor/"
+		delete: no
+	delegate_to: localhost
+	when: inventory_hostname != 'localhost'
+
+- name: Ensure log directory exists
+	file:
+		path: /var/log/madcat
+		state: directory
+		owner: "{{ ansible_user | default(ansible_user_id) }}"
+		mode: '0755'
+
+- name: Enable & start docker service
+	service:
+		name: docker
+		state: started
+		enabled: yes
+
+- name: Bring up sensor docker compose stack
+	community.docker.docker_compose_v2:
+		project_src: "{{ ansible_env.HOME }}/sensor"
+		state: present
+	register: compose_sensor
+	failed_when: compose_sensor is failed
+	notify: Show sensor services
