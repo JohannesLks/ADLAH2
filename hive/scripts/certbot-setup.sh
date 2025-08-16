@@ -41,6 +41,7 @@ copy_certificates() {
     local cert_path="$(pwd)/hive/nginx/certs/cert.pem"
     local key_path="$(pwd)/hive/nginx/certs/key.pem"
 
+    sudo mkdir -p "$(pwd)/hive/nginx/certs/"
     sudo cp "/etc/letsencrypt/live/adlah.dev/fullchain.pem" "$cert_path"
     if [ $? -ne 0 ]; then
         error "Failed to copy certificate."
