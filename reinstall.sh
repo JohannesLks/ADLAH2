@@ -54,7 +54,7 @@ install_hive() {
 deploy_cluster() {
     log "Step 2: Deploying Cluster..."
     # The directory is created by deploy.sh, no need to create it here.
-    rm -rf $HOME/hive/cluster_kubeconfig/config_host
+    sudo rm -rf $HOME/hive/cluster_kubeconfig/config_host
     ~/ADLAH/deploy.sh --cluster --ip $CLUSTER_IP \
         --user lukas --grafana-pass "$PASS"
 }
@@ -68,7 +68,7 @@ setup_sensor() {
         git fetch --all && 
         git checkout dev && 
         git pull && 
-        ./install.sh --type sensor --user lukas \
+        chmod +x ./install.sh && ./install.sh --type sensor --user lukas \
             --hive-ip $HIVE_IP --madcat-if ens5 --mgmt-if ens4 \
             --yes --password \"$PASS\"
     "
